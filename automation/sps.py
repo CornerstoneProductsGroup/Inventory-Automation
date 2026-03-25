@@ -71,6 +71,8 @@ def run_sps_inventory_update() -> None:
 
             # ── Click Create New (opens the new document dialog) ──────────────
             # Known DOM: <button class="sps-button__clickable-element">Create New</button>
+            # Give the SPA a moment to fully render after navigation.
+            page.wait_for_timeout(5000)
             # Wait for at least one such button to appear before trying to click.
             clicked = False
             for ctx in [page, *page.frames]:

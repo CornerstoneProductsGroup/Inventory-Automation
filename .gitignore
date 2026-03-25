@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# Env and local config
+.env
+
+# Playwright artifacts
+screenshots/
+playwright-report/
+
+# IDE
+.vscode/

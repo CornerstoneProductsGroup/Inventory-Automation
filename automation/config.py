@@ -9,6 +9,9 @@ class Settings:
     rithum_url: str
     rithum_username: str
     rithum_password: str
+    sps_url: str
+    sps_username: str
+    sps_password: str
     headless: bool
     timeout_ms: int
 
@@ -25,6 +28,9 @@ def load_settings() -> Settings:
     rithum_url = os.getenv("RITHUM_URL", "https://dsm.commercehub.com/dsm/gotoHome.do")
     rithum_username = os.getenv("RITHUM_USERNAME", "")
     rithum_password = os.getenv("RITHUM_PASSWORD", "")
+    sps_url = os.getenv("SPS_URL", "https://commerce.spscommerce.com")
+    sps_username = os.getenv("SPS_USERNAME", "")
+    sps_password = os.getenv("SPS_PASSWORD", "")
     headless = _to_bool(os.getenv("HEADLESS", "true"), default=True)
     timeout_ms = int(os.getenv("TIMEOUT_MS", "30000"))
 
@@ -32,11 +38,18 @@ def load_settings() -> Settings:
         raise ValueError("Missing RITHUM_USERNAME in environment.")
     if not rithum_password:
         raise ValueError("Missing RITHUM_PASSWORD in environment.")
+    if not sps_username:
+        raise ValueError("Missing SPS_USERNAME in environment.")
+    if not sps_password:
+        raise ValueError("Missing SPS_PASSWORD in environment.")
 
     return Settings(
         rithum_url=rithum_url,
         rithum_username=rithum_username,
         rithum_password=rithum_password,
+        sps_url=sps_url,
+        sps_username=sps_username,
+        sps_password=sps_password,
         headless=headless,
         timeout_ms=timeout_ms,
     )

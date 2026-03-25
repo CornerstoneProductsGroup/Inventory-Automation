@@ -35,6 +35,31 @@ def _get_frame(page, selector: str, timeout_ms: int = 5000, detect_ms: int = 300
     raise RuntimeError(f"Could not find '{selector}' on page or in any iframe.")
 
 
+def _get_visible_context(page, selector: str, detect_ms: int = 750):
+    """Return the first page/frame context where selector becomes visible quickly."""
+    for ctx in [page, *page.frames]:
+        try:
+            ctx.locator(selector).first.wait_for(state="visible", timeout=detect_ms)
+            return ctx
+        except Exception:
+            continue
+    return None
+
+
+def _click_first_visible(page, selectors: list[str], detect_ms: int = 750) -> bool:
+    """Click the first visible locator from the provided selector list."""
+    for selector in selectors:
+        ctx = _get_visible_context(page, selector, detect_ms=detect_ms)
+        if ctx is None:
+            continue
+        try:
+            ctx.locator(selector).first.click()
+            return True
+        except Exception:
+            continue
+    return False
+
+
 def _perform_sps_login(page, username: str, password: str, timeout_ms: int) -> None:
     # Step 1: Enter username and click Next.
     page.locator("input[name='username']").wait_for(state="visible", timeout=timeout_ms)
@@ -70,63 +95,48 @@ def run_sps_inventory_update() -> None:
             _save_screenshot(page, "transactions_tab")
 
             # ── Click Create New (opens the new document dialog) ──────────────
-            # Known DOM: <button class="sps-button__clickable-element">Create New</button>
-            # Give the SPA a moment to fully render after navigation.
+            # Give the SPA a short, fixed window to finish rendering, then click immediately.
             page.wait_for_timeout(5000)
-            # Wait for at least one such button to appear before trying to click.
-            clicked = False
-            for ctx in [page, *page.frames]:
-                try:
-                    # has_text does a substring match — robust to surrounding whitespace
-                    btn = ctx.locator("button.sps-button__clickable-element", has_text="Create New").first
-                    btn.wait_for(state="visible", timeout=settings.timeout_ms)
-                    btn.click()
-                    clicked = True
-                    break
-                except Exception:
-                    continue
-
-            # Broader fallbacks in case class name changes
-            if not clicked:
-                for ctx in [page, *page.frames]:
-                    try:
-                        btn = ctx.get_by_role("button", name="Create New")
-                        btn.wait_for(state="visible", timeout=3000)
-                        btn.click()
-                        clicked = True
-                        break
-                    except Exception:
-                        continue
+            clicked = _click_first_visible(
+                page,
+                [
+                    "button.sps-button__clickable-element:has-text('Create New')",
+                    "button[data-testid='create-new-document-button']",
+                    "button[title='Create New']",
+                    "role=button[name='Create New']",
+                ],
+                detect_ms=1000,
+            )
 
             if not clicked:
                 _save_screenshot(page, "create_new_not_found")
                 raise RuntimeError("Could not find Create New button on transactions page.")
 
             # ── Open Partner dropdown and select Tractor Supply Dropship ───────
-            f = _get_frame(page, "[data-testid='createNewDocPartnerSelector-value']", settings.timeout_ms)
+            f = _get_frame(page, "[data-testid='createNewDocPartnerSelector-value']", detect_ms=1000)
             f.locator("[data-testid='createNewDocPartnerSelector-value']").click()
             option = f.locator("span", has_text="Tractor Supply Dropship").first
-            option.wait_for(state="visible", timeout=settings.timeout_ms)
+            option.wait_for(state="visible", timeout=2000)
             option.click()
             _save_screenshot(page, "partner_selected")
 
             # ── Check "I don't have a source document" ─────────────────────────
-            f = _get_frame(page, "label.sps-checkable__label", settings.timeout_ms)
+            f = _get_frame(page, "label.sps-checkable__label", detect_ms=1000)
             checkbox = f.locator("label.sps-checkable__label", has_text="I don't have a source document.").first
-            checkbox.wait_for(state="visible", timeout=settings.timeout_ms)
+            checkbox.wait_for(state="visible", timeout=2000)
             checkbox.click()
             _save_screenshot(page, "no_source_doc_checked")
 
             # ── Open template dropdown and select Inventory Main ───────────────
-            f = _get_frame(page, "[data-testid='createNewDocTemplateSelector-value']", settings.timeout_ms)
+            f = _get_frame(page, "[data-testid='createNewDocTemplateSelector-value']", detect_ms=1000)
             f.locator("[data-testid='createNewDocTemplateSelector-value']").click()
             template = f.locator("span", has_text="Inventory Main").first
-            template.wait_for(state="visible", timeout=settings.timeout_ms)
+            template.wait_for(state="visible", timeout=2000)
             template.click()
             _save_screenshot(page, "template_selected")
 
             # ── Click Create New in the modal ──────────────────────────────────
-            f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Create New']", settings.timeout_ms)
+            f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Create New']", detect_ms=1000)
             f.locator("button[data-testid='modalOkBtn'][title='Create New']").click()
             page.wait_for_load_state("load")
             _save_screenshot(page, "form_loaded")

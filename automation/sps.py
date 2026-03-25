@@ -37,7 +37,7 @@ def _get_frame(page, selector: str, timeout_ms: int = 5000):
     raise RuntimeError(f"Could not find '{selector}' on page or in any iframe.")
 
 
-
+def _perform_sps_login(page, username: str, password: str, timeout_ms: int) -> None:
     # Step 1: Enter username and click Next.
     page.locator("input[name='username']").wait_for(state="visible", timeout=timeout_ms)
     page.locator("input[name='username']").fill(username)

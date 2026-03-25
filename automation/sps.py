@@ -17,7 +17,27 @@ def _save_screenshot(page, name: str) -> None:
     page.screenshot(path=str(shots_dir / f"{_timestamp()}_sps_{name}.png"), full_page=True)
 
 
-def _perform_sps_login(page, username: str, password: str, timeout_ms: int) -> None:
+def _get_frame(page, selector: str, timeout_ms: int = 5000):
+    """Return the first frame (main page or iframe) where selector is visible."""
+    # Try main page first
+    try:
+        loc = page.locator(selector).first
+        if loc.is_visible(timeout=timeout_ms):
+            return page
+    except Exception:
+        pass
+    # Search all iframes
+    for frame in page.frames:
+        try:
+            loc = frame.locator(selector).first
+            if loc.is_visible(timeout=timeout_ms):
+                return frame
+        except Exception:
+            continue
+    raise RuntimeError(f"Could not find '{selector}' on page or in any iframe.")
+
+
+
     # Step 1: Enter username and click Next.
     page.locator("input[name='username']").wait_for(state="visible", timeout=timeout_ms)
     page.locator("input[name='username']").fill(username)
@@ -99,61 +119,65 @@ def run_sps_inventory_update() -> None:
             _save_screenshot(page, "transactions_tab")
 
             # ── Clear search fields ────────────────────────────────────────────
-            clear_btn = page.locator("button[data-testid='advSearchBottomClearButton']").first
-            if clear_btn.is_visible(timeout=5000):
-                clear_btn.click()
+            try:
+                f = _get_frame(page, "button[data-testid='advSearchBottomClearButton']", 5000)
+                f.locator("button[data-testid='advSearchBottomClearButton']").first.click()
                 page.wait_for_timeout(1000)
+            except Exception:
+                pass  # Clear button may not always be present
 
-            # ── Search for inventory ───────────────────────────────────────────
-            search_input = page.locator("input[data-testid='searchField__input']")
-            search_input.wait_for(state="visible", timeout=settings.timeout_ms)
-            search_input.fill("inventory")
-            page.locator("i.sps-icon-search").first.click()
-            page.wait_for_load_state("domcontentloaded")
+            # ── Type inventory in search bar and click search ──────────────────
+            f = _get_frame(page, "input[data-testid='searchField__input']", settings.timeout_ms)
+            f.locator("input[data-testid='searchField__input']").first.fill("inventory")
+            f.locator("i.sps-icon-search").first.click()
             page.wait_for_timeout(2000)
             _save_screenshot(page, "search_results")
 
             # ── Click New ──────────────────────────────────────────────────────
-            page.locator("button[data-testid='createNewBtn']").click()
+            f = _get_frame(page, "button[data-testid='createNewBtn']", settings.timeout_ms)
+            f.locator("button[data-testid='createNewBtn']").click()
             page.wait_for_timeout(2000)
             _save_screenshot(page, "new_dialog")
 
             # ── Select 'Inventory Main' template from dropdown ─────────────────
-            page.locator("[data-testid='createNewDocTemplateSelector-value']").click()
+            f = _get_frame(page, "[data-testid='createNewDocTemplateSelector-value']", settings.timeout_ms)
+            f.locator("[data-testid='createNewDocTemplateSelector-value']").click()
             page.wait_for_timeout(1000)
-            page.locator("text=Inventory Main").first.click()
+            f.locator("text=Inventory Main").first.click()
             page.wait_for_timeout(1000)
             _save_screenshot(page, "template_selected")
 
             # ── Click Create New ───────────────────────────────────────────────
-            page.locator("button[data-testid='modalOkBtn'][title='Create New']").click()
+            f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Create New']", settings.timeout_ms)
+            f.locator("button[data-testid='modalOkBtn'][title='Create New']").click()
             page.wait_for_load_state("domcontentloaded")
             page.wait_for_timeout(3000)
             _save_screenshot(page, "form_loaded")
 
             # ── Expand SHORT section ───────────────────────────────────────────
-            short_btn = page.locator("button[data-testid='dataEntryCard__expanding']")
-            short_btn.wait_for(state="visible", timeout=settings.timeout_ms)
-            short_btn.click()
+            f = _get_frame(page, "button[data-testid='dataEntryCard__expanding']", settings.timeout_ms)
+            f.locator("button[data-testid='dataEntryCard__expanding']").first.click()
             page.wait_for_timeout(1500)
             _save_screenshot(page, "short_expanded")
 
             # ── Set Report Date to today ───────────────────────────────────────
-            date_field = page.locator("input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']")
-            date_field.wait_for(state="visible", timeout=settings.timeout_ms)
+            f = _get_frame(page, "input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']", settings.timeout_ms)
+            date_field = f.locator("input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']")
             date_field.triple_click()
             date_field.fill(today)
-            page.keyboard.press("Tab")
+            f.locator("body").press("Tab")
             page.wait_for_timeout(500)
             _save_screenshot(page, "date_set")
 
             # ── Click Send (paper-plane icon button) ───────────────────────────
-            page.locator("button:has(i.sps-icon-paper-plane)").first.click()
+            f = _get_frame(page, "button:has(i.sps-icon-paper-plane)", settings.timeout_ms)
+            f.locator("button:has(i.sps-icon-paper-plane)").first.click()
             page.wait_for_timeout(2000)
             _save_screenshot(page, "send_clicked")
 
             # ── Click Continue on confirmation dialog ──────────────────────────
-            page.locator("button[data-testid='modalOkBtn'][title='Continue']").click()
+            f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Continue']", settings.timeout_ms)
+            f.locator("button[data-testid='modalOkBtn'][title='Continue']").click()
             page.wait_for_load_state("domcontentloaded")
             _save_screenshot(page, "submitted")
 

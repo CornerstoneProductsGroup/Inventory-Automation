@@ -62,9 +62,9 @@ def run_sps_inventory_update() -> None:
 
         try:
             # ── Login ──────────────────────────────────────────────────────────
-            page.goto(settings.sps_url, wait_until="networkidle")
+            page.goto(settings.sps_url, wait_until="load")
             _perform_sps_login(page, settings.sps_username, settings.sps_password, settings.timeout_ms)
-            page.wait_for_load_state("networkidle")
+            page.wait_for_load_state("load")
             _save_screenshot(page, "after_login")
 
             # ── Click Fulfillment tile ─────────────────────────────────────────────
@@ -104,11 +104,11 @@ def run_sps_inventory_update() -> None:
 
             if not clicked:
                 raise RuntimeError("Could not find Fulfillment tile. Check screenshots for current page state.")
-            page.wait_for_load_state("networkidle")
+            page.wait_for_load_state("load")
             _save_screenshot(page, "fulfillment_selected")
 
             # ── Navigate directly to Transactions list ─────────────────────────
-            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="networkidle")
+            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="load")
             _save_screenshot(page, "transactions_tab")
 
             # ── Click Create New (opens the new document dialog) ──────────────
@@ -141,7 +141,7 @@ def run_sps_inventory_update() -> None:
             # ── Click Create New in the modal ──────────────────────────────────
             f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Create New']", settings.timeout_ms)
             f.locator("button[data-testid='modalOkBtn'][title='Create New']").click()
-            page.wait_for_load_state("networkidle")
+            page.wait_for_load_state("load")
             _save_screenshot(page, "form_loaded")
 
             # ── Expand SHORT section (optional — skipped if already expanded) ──
@@ -175,7 +175,7 @@ def run_sps_inventory_update() -> None:
             continue_btn = f.locator("button[data-testid='modalOkBtn'][title='Continue']")
             continue_btn.wait_for(state="visible", timeout=settings.timeout_ms)
             continue_btn.click()
-            page.wait_for_load_state("networkidle")
+            page.wait_for_load_state("load")
             _save_screenshot(page, "submitted")
 
             print(f"SPS Commerce (Tractor Supply) inventory update submitted successfully for {today}.")

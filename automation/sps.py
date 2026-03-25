@@ -145,7 +145,7 @@ def run_sps_inventory_update() -> None:
             f = _get_frame(page, "input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']", settings.timeout_ms)
             date_field = f.locator("input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']")
             date_field.wait_for(state="visible", timeout=settings.timeout_ms)
-            date_field.triple_click()
+            date_field.click(click_count=3)
             date_field.fill(today)
             f.locator("body").press("Tab")
             _save_screenshot(page, "date_set")

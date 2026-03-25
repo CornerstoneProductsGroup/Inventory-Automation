@@ -18,13 +18,12 @@ def _save_screenshot(page, name: str) -> None:
 
 
 def _perform_sps_login(page, username: str, password: str, timeout_ms: int) -> None:
-    # SPS Commerce uses Auth0 two-step login (same pattern as Rithum/CommerceHub).
     # Step 1: Enter username and click Next.
     page.locator("input[name='username']").wait_for(state="visible", timeout=timeout_ms)
     page.locator("input[name='username']").fill(username)
     page.locator("button._button-login-id").click()
 
-    # Step 2: Enter password and click Continue.
+    # Step 2: Enter password and click Next.
     page.locator("input[name='password']").wait_for(state="visible", timeout=timeout_ms)
     page.locator("input[name='password']").fill(password)
     page.locator("button._button-login-password").click()
@@ -42,36 +41,75 @@ def run_sps_inventory_update() -> None:
         page.set_default_timeout(settings.timeout_ms)
 
         try:
+            # ── Login ──────────────────────────────────────────────────────────
             page.goto(settings.sps_url, wait_until="domcontentloaded")
             _perform_sps_login(page, settings.sps_username, settings.sps_password, settings.timeout_ms)
-            _save_screenshot(page, "after_login")
-
-            # Allow portal dashboard to fully render after auth redirect.
             page.wait_for_load_state("networkidle")
             page.wait_for_timeout(3000)
-            _save_screenshot(page, "dashboard")
+            _save_screenshot(page, "after_login")
 
-            # Click "Create New Transaction"
-            page.locator("button:has-text('Create New Transaction'), a:has-text('Create New Transaction')").first.click()
+            # ── Click Transactions tab ─────────────────────────────────────────
+            page.locator("a[data-testid='transactions_tab']").click()
             page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(1500)
-            _save_screenshot(page, "create_transaction")
+            page.wait_for_timeout(2000)
+            _save_screenshot(page, "transactions_tab")
 
-            # Select "Inventory" from transaction type options
-            page.locator("text=Inventory").first.click()
+            # ── Clear search fields ────────────────────────────────────────────
+            clear_btn = page.locator("button[data-testid='advSearchBottomClearButton']").first
+            if clear_btn.is_visible(timeout=5000):
+                clear_btn.click()
+                page.wait_for_timeout(1000)
+
+            # ── Search for inventory ───────────────────────────────────────────
+            search_input = page.locator("input[data-testid='searchField__input']")
+            search_input.wait_for(state="visible", timeout=settings.timeout_ms)
+            search_input.fill("inventory")
+            page.locator("i.sps-icon-search").first.click()
             page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(1500)
-            _save_screenshot(page, "inventory_selected")
+            page.wait_for_timeout(2000)
+            _save_screenshot(page, "search_results")
 
-            # Set date to today
-            date_field = page.locator("input[type='date'], input[name*='date'], input[id*='date']").first
+            # ── Click New ──────────────────────────────────────────────────────
+            page.locator("button[data-testid='createNewBtn']").click()
+            page.wait_for_timeout(2000)
+            _save_screenshot(page, "new_dialog")
+
+            # ── Select 'Inventory Main' template from dropdown ─────────────────
+            page.locator("[data-testid='createNewDocTemplateSelector-value']").click()
+            page.wait_for_timeout(1000)
+            page.locator("text=Inventory Main").first.click()
+            page.wait_for_timeout(1000)
+            _save_screenshot(page, "template_selected")
+
+            # ── Click Create New ───────────────────────────────────────────────
+            page.locator("button[data-testid='modalOkBtn'][title='Create New']").click()
+            page.wait_for_load_state("domcontentloaded")
+            page.wait_for_timeout(3000)
+            _save_screenshot(page, "form_loaded")
+
+            # ── Expand SHORT section ───────────────────────────────────────────
+            short_btn = page.locator("button[data-testid='dataEntryCard__expanding']")
+            short_btn.wait_for(state="visible", timeout=settings.timeout_ms)
+            short_btn.click()
+            page.wait_for_timeout(1500)
+            _save_screenshot(page, "short_expanded")
+
+            # ── Set Report Date to today ───────────────────────────────────────
+            date_field = page.locator("input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']")
             date_field.wait_for(state="visible", timeout=settings.timeout_ms)
             date_field.triple_click()
             date_field.fill(today)
+            page.keyboard.press("Tab")
+            page.wait_for_timeout(500)
             _save_screenshot(page, "date_set")
 
-            # Click Send
-            page.locator("button:has-text('Send'), input[value='Send']").first.click()
+            # ── Click Send (paper-plane icon button) ───────────────────────────
+            page.locator("button:has(i.sps-icon-paper-plane)").first.click()
+            page.wait_for_timeout(2000)
+            _save_screenshot(page, "send_clicked")
+
+            # ── Click Continue on confirmation dialog ──────────────────────────
+            page.locator("button[data-testid='modalOkBtn'][title='Continue']").click()
             page.wait_for_load_state("domcontentloaded")
             _save_screenshot(page, "submitted")
 

@@ -83,6 +83,40 @@ Then paste the line above and save.
 
 The scheduled job runs both automations by calling `run_all.py` through the project virtual environment.
 
+## Scheduling (systemd timer)
+
+For a more reliable scheduler than cron, use a `systemd` service and timer. This gives you better logging, restart behavior, and catch-up handling if the machine was off at the scheduled time.
+
+Copy the included unit files into your systemd directory:
+
+```bash
+sudo cp systemd/inventory-automation.service /etc/systemd/system/
+sudo cp systemd/inventory-automation.timer /etc/systemd/system/
+```
+
+Enable and start the timer:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now inventory-automation.timer
+```
+
+Check status:
+
+```bash
+systemctl list-timers inventory-automation.timer
+systemctl status inventory-automation.timer
+systemctl status inventory-automation.service
+```
+
+View logs:
+
+```bash
+journalctl -u inventory-automation.service -n 100 --no-pager
+```
+
+The timer is configured to run every day at 7:00 AM and to run the missed job shortly after boot if the machine was off at the scheduled time.
+
 ## Security Notes
 
 - Do not commit `.env`.

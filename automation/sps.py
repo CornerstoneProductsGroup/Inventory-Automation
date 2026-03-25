@@ -153,11 +153,14 @@ def run_sps_inventory_update() -> None:
             page.wait_for_timeout(3000)
             _save_screenshot(page, "form_loaded")
 
-            # ── Expand SHORT section ───────────────────────────────────────────
-            f = _get_frame(page, "button[data-testid='dataEntryCard__expanding']", settings.timeout_ms)
-            f.locator("button[data-testid='dataEntryCard__expanding']").first.click()
-            page.wait_for_timeout(1500)
-            _save_screenshot(page, "short_expanded")
+            # ── Expand SHORT section (optional — skipped if not present) ────────
+            try:
+                f = _get_frame(page, "button[data-testid='dataEntryCard__expanding']", 5000)
+                f.locator("button[data-testid='dataEntryCard__expanding']").first.click()
+                page.wait_for_timeout(1500)
+                _save_screenshot(page, "short_expanded")
+            except Exception:
+                pass  # Section may already be expanded or not present
 
             # ── Set Report Date to today ───────────────────────────────────────
             f = _get_frame(page, "input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']", settings.timeout_ms)
@@ -168,9 +171,9 @@ def run_sps_inventory_update() -> None:
             page.wait_for_timeout(500)
             _save_screenshot(page, "date_set")
 
-            # ── Click Send (paper-plane icon button) ───────────────────────────
-            f = _get_frame(page, "button:has(i.sps-icon-paper-plane)", settings.timeout_ms)
-            f.locator("button:has(i.sps-icon-paper-plane)").first.click()
+            # ── Click Send button ──────────────────────────────────────────────
+            f = _get_frame(page, "button[data-testid='dataEntry_document-actions-send']", settings.timeout_ms)
+            f.locator("button[data-testid='dataEntry_document-actions-send']").click()
             page.wait_for_timeout(2000)
             _save_screenshot(page, "send_clicked")
 

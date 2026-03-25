@@ -118,36 +118,35 @@ def run_sps_inventory_update() -> None:
             page.wait_for_timeout(3000)
             _save_screenshot(page, "transactions_tab")
 
-            # ── Clear search fields ────────────────────────────────────────────
-            try:
-                f = _get_frame(page, "button[data-testid='advSearchBottomClearButton']", 5000)
-                f.locator("button[data-testid='advSearchBottomClearButton']").first.click()
-                page.wait_for_timeout(1000)
-            except Exception:
-                pass  # Clear button may not always be present
-
-            # ── Type inventory in search bar and click search ──────────────────
-            f = _get_frame(page, "input[data-testid='searchField__input']", settings.timeout_ms)
-            f.locator("input[data-testid='searchField__input']").first.fill("inventory")
-            f.locator("i.sps-icon-search").first.click()
+            # ── Click Create New (opens the new document dialog) ──────────────
+            f = _get_frame(page, "button.sps-button__clickable-element", settings.timeout_ms)
+            f.locator("button.sps-button__clickable-element", has_text="Create New").first.click()
             page.wait_for_timeout(2000)
-            _save_screenshot(page, "search_results")
+            _save_screenshot(page, "create_new_dialog")
 
-            # ── Click New ──────────────────────────────────────────────────────
-            f = _get_frame(page, "button[data-testid='createNewBtn']", settings.timeout_ms)
-            f.locator("button[data-testid='createNewBtn']").click()
-            page.wait_for_timeout(2000)
-            _save_screenshot(page, "new_dialog")
+            # ── Open Partner dropdown and select Tractor Supply Dropship ───────
+            f = _get_frame(page, "[data-testid='createNewDocPartnerSelector-value']", settings.timeout_ms)
+            f.locator("[data-testid='createNewDocPartnerSelector-value']").click()
+            page.wait_for_timeout(1000)
+            f.locator("span", has_text="Tractor Supply Dropship").first.click()
+            page.wait_for_timeout(1000)
+            _save_screenshot(page, "partner_selected")
 
-            # ── Select 'Inventory Main' template from dropdown ─────────────────
+            # ── Check "I don't have a source document" ─────────────────────────
+            f = _get_frame(page, "label.sps-checkable__label", settings.timeout_ms)
+            f.locator("label.sps-checkable__label", has_text="I don't have a source document.").first.click()
+            page.wait_for_timeout(1000)
+            _save_screenshot(page, "no_source_doc_checked")
+
+            # ── Open template dropdown and select Inventory Main ───────────────
             f = _get_frame(page, "[data-testid='createNewDocTemplateSelector-value']", settings.timeout_ms)
             f.locator("[data-testid='createNewDocTemplateSelector-value']").click()
             page.wait_for_timeout(1000)
-            f.locator("text=Inventory Main").first.click()
+            f.locator("span", has_text="Inventory Main").first.click()
             page.wait_for_timeout(1000)
             _save_screenshot(page, "template_selected")
 
-            # ── Click Create New ───────────────────────────────────────────────
+            # ── Click Create New in the modal ──────────────────────────────────
             f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Create New']", settings.timeout_ms)
             f.locator("button[data-testid='modalOkBtn'][title='Create New']").click()
             page.wait_for_load_state("domcontentloaded")

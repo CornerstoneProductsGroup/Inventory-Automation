@@ -92,10 +92,10 @@ def run_sps_inventory_update() -> None:
             page.wait_for_timeout(10000)
             _save_screenshot(page, "fulfillment_selected")
 
-            # ── Click Transactions tab ─────────────────────────────────────────
-            page.locator("a[data-testid='transactions_tab']").click()
-            page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(2000)
+            # ── Navigate directly to Transactions list ────────────────────────────
+            # The tab lives inside an iframe so direct navigation is more reliable.
+            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="domcontentloaded")
+            page.wait_for_timeout(3000)
             _save_screenshot(page, "transactions_tab")
 
             # ── Clear search fields ────────────────────────────────────────────

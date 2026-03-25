@@ -110,8 +110,13 @@ def run_rithum_inventory_update() -> None:
             _perform_login(page, settings.rithum_username, settings.rithum_password, settings.timeout_ms)
             _save_screenshot(page, "after_login")
 
+            # Profile cards can render a few seconds after auth redirects complete.
+            page.wait_for_load_state("domcontentloaded")
+            page.wait_for_timeout(4000)
+
+            page.wait_for_selector("a.application-identity-item", timeout=settings.timeout_ms)
             profile_link = page.locator("a.application-identity-item").filter(has_text="Cornerstone Products Group").first
-            if profile_link.count() > 0 and profile_link.is_visible(timeout=2500):
+            if profile_link.count() > 0 and profile_link.is_visible(timeout=settings.timeout_ms):
                 profile_link.click(timeout=settings.timeout_ms)
             else:
                 _click_first_available_profile(page, settings.timeout_ms)

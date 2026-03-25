@@ -113,30 +113,31 @@ def run_sps_inventory_update() -> None:
                 raise RuntimeError("Could not find Create New button on transactions page.")
 
             # ── Open Partner dropdown and select Tractor Supply Dropship ───────
-            f = _get_frame(page, "[data-testid='createNewDocPartnerSelector-value']", detect_ms=1000)
+            # Use full timeout here — the modal takes a few seconds to appear after clicking Create New.
+            f = _get_frame(page, "[data-testid='createNewDocPartnerSelector-value']", detect_ms=settings.timeout_ms)
             f.locator("[data-testid='createNewDocPartnerSelector-value']").click()
             option = f.locator("span", has_text="Tractor Supply Dropship").first
-            option.wait_for(state="visible", timeout=2000)
+            option.wait_for(state="visible", timeout=settings.timeout_ms)
             option.click()
             _save_screenshot(page, "partner_selected")
 
             # ── Check "I don't have a source document" ─────────────────────────
-            f = _get_frame(page, "label.sps-checkable__label", detect_ms=1000)
+            f = _get_frame(page, "label.sps-checkable__label", detect_ms=3000)
             checkbox = f.locator("label.sps-checkable__label", has_text="I don't have a source document.").first
-            checkbox.wait_for(state="visible", timeout=2000)
+            checkbox.wait_for(state="visible", timeout=3000)
             checkbox.click()
             _save_screenshot(page, "no_source_doc_checked")
 
             # ── Open template dropdown and select Inventory Main ───────────────
-            f = _get_frame(page, "[data-testid='createNewDocTemplateSelector-value']", detect_ms=1000)
+            f = _get_frame(page, "[data-testid='createNewDocTemplateSelector-value']", detect_ms=3000)
             f.locator("[data-testid='createNewDocTemplateSelector-value']").click()
             template = f.locator("span", has_text="Inventory Main").first
-            template.wait_for(state="visible", timeout=2000)
+            template.wait_for(state="visible", timeout=3000)
             template.click()
             _save_screenshot(page, "template_selected")
 
             # ── Click Create New in the modal ──────────────────────────────────
-            f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Create New']", detect_ms=1000)
+            f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Create New']", detect_ms=3000)
             f.locator("button[data-testid='modalOkBtn'][title='Create New']").click()
             page.wait_for_load_state("load")
             _save_screenshot(page, "form_loaded")

@@ -110,9 +110,13 @@ def run_rithum_inventory_update() -> None:
             _perform_login(page, settings.rithum_username, settings.rithum_password, settings.timeout_ms)
             _save_screenshot(page, "after_login")
 
-            # Profile cards can render a few seconds after auth redirects complete.
-            page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(4000)
+            # Profile cards can render several seconds after auth redirects complete.
+            # Use networkidle to ensure redirects and JS have settled.
+            try:
+                page.wait_for_load_state("networkidle", timeout=15000)
+            except Exception:
+                page.wait_for_load_state("domcontentloaded")
+            page.wait_for_timeout(3000)
 
             page.wait_for_selector("a.application-identity-item", timeout=settings.timeout_ms)
             profile_link = page.locator("a.application-identity-item").filter(has_text="Cornerstone Products Group").first

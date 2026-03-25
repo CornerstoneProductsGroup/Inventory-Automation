@@ -64,50 +64,10 @@ def run_sps_inventory_update() -> None:
             # ── Login ──────────────────────────────────────────────────────────
             page.goto(settings.sps_url, wait_until="load")
             _perform_sps_login(page, settings.sps_username, settings.sps_password, settings.timeout_ms)
-            page.wait_for_load_state("load")
             _save_screenshot(page, "after_login")
 
-            # ── Click Fulfillment tile ─────────────────────────────────────────────
-            fulfillment_selectors = [
-                "a:has(img[src*='cube'])",
-                "a:has(img.sps-tile--image)",
-                "button:has(img[src*='cube'])",
-                "div.sps-tile:has(img[src*='cube'])",
-                "img[src*='cube.svg']",
-                "img.sps-tile--image",
-            ]
-
-            clicked = False
-            for sel in fulfillment_selectors:
-                try:
-                    loc = page.locator(sel).first
-                    if loc.is_visible(timeout=3000):
-                        loc.click()
-                        clicked = True
-                        break
-                except Exception:
-                    continue
-
-            if not clicked:
-                for frame in page.frames:
-                    if clicked:
-                        break
-                    for sel in fulfillment_selectors:
-                        try:
-                            loc = frame.locator(sel).first
-                            if loc.is_visible(timeout=3000):
-                                loc.click()
-                                clicked = True
-                                break
-                        except Exception:
-                            continue
-
-            if not clicked:
-                raise RuntimeError("Could not find Fulfillment tile. Check screenshots for current page state.")
-            page.wait_for_load_state("load")
-            _save_screenshot(page, "fulfillment_selected")
-
             # ── Navigate directly to Transactions list ─────────────────────────
+            # Skip the dashboard tile entirely — go straight to the transactions URL.
             page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="load")
             _save_screenshot(page, "transactions_tab")
 

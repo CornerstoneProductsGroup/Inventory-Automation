@@ -70,34 +70,26 @@ def run_sps_inventory_update() -> None:
             _save_screenshot(page, "transactions_tab")
 
             # ── Click Create New (opens the new document dialog) ──────────────
+            # Known DOM: <button class="sps-button__clickable-element">Create New</button>
+            # Wait for at least one such button to appear before trying to click.
             clicked = False
-
-            # Primary: Playwright role-based locator (most resilient to DOM changes)
             for ctx in [page, *page.frames]:
                 try:
-                    btn = ctx.get_by_role("button", name="Create New", exact=True)
-                    btn.wait_for(state="visible", timeout=3000)
+                    # has_text does a substring match — robust to surrounding whitespace
+                    btn = ctx.locator("button.sps-button__clickable-element", has_text="Create New").first
+                    btn.wait_for(state="visible", timeout=settings.timeout_ms)
                     btn.click()
                     clicked = True
                     break
                 except Exception:
                     continue
 
-            # Fallback: CSS / attribute selectors
+            # Broader fallbacks in case class name changes
             if not clicked:
-                create_new_selectors = [
-                    "button[data-testid='createNewBtn']",
-                    "button[title='Create New']",
-                    "button:has-text('Create New')",
-                    "button.sps-button__clickable-element:has-text('Create New')",
-                    "[class*='createNew'] button",
-                    "[class*='create-new'] button",
-                ]
-                for sel in create_new_selectors:
+                for ctx in [page, *page.frames]:
                     try:
-                        f = _get_frame(page, sel, settings.timeout_ms)
-                        btn = f.locator(sel).first
-                        btn.wait_for(state="visible", timeout=settings.timeout_ms)
+                        btn = ctx.get_by_role("button", name="Create New")
+                        btn.wait_for(state="visible", timeout=3000)
                         btn.click()
                         clicked = True
                         break

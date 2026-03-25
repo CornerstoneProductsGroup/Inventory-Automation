@@ -45,7 +45,7 @@ def run_sps_inventory_update() -> None:
             page.goto(settings.sps_url, wait_until="domcontentloaded")
             _perform_sps_login(page, settings.sps_username, settings.sps_password, settings.timeout_ms)
             page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(10000)
+            page.wait_for_timeout(5000)
             _save_screenshot(page, "after_login")
 
             # ── Click Fulfillment tile ─────────────────────────────────────────────
@@ -89,7 +89,7 @@ def run_sps_inventory_update() -> None:
             if not clicked:
                 raise RuntimeError("Could not find Fulfillment tile. Check screenshots for current page state.")
             page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(10000)
+            page.wait_for_timeout(5000)
             _save_screenshot(page, "fulfillment_selected")
 
             # ── Navigate directly to Transactions list ────────────────────────────

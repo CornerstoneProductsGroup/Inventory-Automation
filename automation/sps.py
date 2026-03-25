@@ -17,21 +17,19 @@ def _save_screenshot(page, name: str) -> None:
     page.screenshot(path=str(shots_dir / f"{_timestamp()}_sps_{name}.png"), full_page=True)
 
 
-def _get_frame(page, selector: str, timeout_ms: int = 5000):
-    """Return the first frame (main page or iframe) where selector is visible."""
+def _get_frame(page, selector: str, timeout_ms: int = 5000, detect_ms: int = 3000):
+    """Return the first frame (main page or iframe) where selector is attached."""
     # Try main page first
     try:
-        loc = page.locator(selector).first
-        if loc.is_visible(timeout=timeout_ms):
-            return page
+        page.locator(selector).first.wait_for(state="attached", timeout=detect_ms)
+        return page
     except Exception:
         pass
     # Search all iframes
     for frame in page.frames:
         try:
-            loc = frame.locator(selector).first
-            if loc.is_visible(timeout=timeout_ms):
-                return frame
+            frame.locator(selector).first.wait_for(state="attached", timeout=detect_ms)
+            return frame
         except Exception:
             continue
     raise RuntimeError(f"Could not find '{selector}' on page or in any iframe.")
@@ -68,27 +66,46 @@ def run_sps_inventory_update() -> None:
 
             # ── Navigate directly to Transactions list ─────────────────────────
             # Skip the dashboard tile entirely — go straight to the transactions URL.
-            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="load")
+            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="networkidle")
             _save_screenshot(page, "transactions_tab")
 
             # ── Click Create New (opens the new document dialog) ──────────────
-            create_new_selectors = [
-                "button[data-testid='createNewBtn']",
-                "button[title='Create New']",
-                "button.sps-button__clickable-element:has-text('Create New')",
-            ]
             clicked = False
-            for sel in create_new_selectors:
+
+            # Primary: Playwright role-based locator (most resilient to DOM changes)
+            for ctx in [page, *page.frames]:
                 try:
-                    f = _get_frame(page, sel, settings.timeout_ms)
-                    btn = f.locator(sel).first
-                    btn.wait_for(state="visible", timeout=settings.timeout_ms)
+                    btn = ctx.get_by_role("button", name="Create New", exact=True)
+                    btn.wait_for(state="visible", timeout=3000)
                     btn.click()
                     clicked = True
                     break
                 except Exception:
                     continue
+
+            # Fallback: CSS / attribute selectors
             if not clicked:
+                create_new_selectors = [
+                    "button[data-testid='createNewBtn']",
+                    "button[title='Create New']",
+                    "button:has-text('Create New')",
+                    "button.sps-button__clickable-element:has-text('Create New')",
+                    "[class*='createNew'] button",
+                    "[class*='create-new'] button",
+                ]
+                for sel in create_new_selectors:
+                    try:
+                        f = _get_frame(page, sel, settings.timeout_ms)
+                        btn = f.locator(sel).first
+                        btn.wait_for(state="visible", timeout=settings.timeout_ms)
+                        btn.click()
+                        clicked = True
+                        break
+                    except Exception:
+                        continue
+
+            if not clicked:
+                _save_screenshot(page, "create_new_not_found")
                 raise RuntimeError("Could not find Create New button on transactions page.")
 
             # ── Open Partner dropdown and select Tractor Supply Dropship ───────

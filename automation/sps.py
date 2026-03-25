@@ -49,13 +49,45 @@ def run_sps_inventory_update() -> None:
             _save_screenshot(page, "after_login")
 
             # ── Click Fulfillment tile ─────────────────────────────────────────────
-            fulfillment_tile = page.locator(
-                "a:has-text('Fulfillment'), button:has-text('Fulfillment'), "
-                "div.sps-tile:has-text('Fulfillment'), "
-                "img[src*='cube']"
-            ).first
-            fulfillment_tile.wait_for(state="visible", timeout=settings.timeout_ms)
-            fulfillment_tile.click()
+            # The tile is an <a> or clickable parent wrapping the cube svg img.
+            # Try direct page first, then fall back to searching inside iframes.
+            fulfillment_selectors = [
+                "a:has(img[src*='cube'])",
+                "a:has(img.sps-tile--image)",
+                "button:has(img[src*='cube'])",
+                "div.sps-tile:has(img[src*='cube'])",
+                "img[src*='cube.svg']",
+                "img.sps-tile--image",
+            ]
+
+            clicked = False
+            for sel in fulfillment_selectors:
+                try:
+                    loc = page.locator(sel).first
+                    if loc.is_visible(timeout=3000):
+                        loc.click()
+                        clicked = True
+                        break
+                except Exception:
+                    continue
+
+            if not clicked:
+                # Portal may render inside an iframe — search all frames
+                for frame in page.frames:
+                    if clicked:
+                        break
+                    for sel in fulfillment_selectors:
+                        try:
+                            loc = frame.locator(sel).first
+                            if loc.is_visible(timeout=3000):
+                                loc.click()
+                                clicked = True
+                                break
+                        except Exception:
+                            continue
+
+            if not clicked:
+                raise RuntimeError("Could not find Fulfillment tile. Check screenshots for current page state.")
             page.wait_for_load_state("domcontentloaded")
             page.wait_for_timeout(10000)
             _save_screenshot(page, "fulfillment_selected")

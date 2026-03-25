@@ -45,8 +45,20 @@ def run_sps_inventory_update() -> None:
             page.goto(settings.sps_url, wait_until="domcontentloaded")
             _perform_sps_login(page, settings.sps_username, settings.sps_password, settings.timeout_ms)
             page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(4000)
             _save_screenshot(page, "after_login")
+
+            # ── Click Fulfillment tile ─────────────────────────────────────────────
+            fulfillment_tile = page.locator(
+                "a:has-text('Fulfillment'), button:has-text('Fulfillment'), "
+                "div.sps-tile:has-text('Fulfillment'), "
+                "img[src*='cube']"
+            ).first
+            fulfillment_tile.wait_for(state="visible", timeout=settings.timeout_ms)
+            fulfillment_tile.click()
+            page.wait_for_load_state("domcontentloaded")
+            page.wait_for_timeout(3000)
+            _save_screenshot(page, "fulfillment_selected")
 
             # ── Click Transactions tab ─────────────────────────────────────────
             page.locator("a[data-testid='transactions_tab']").click()

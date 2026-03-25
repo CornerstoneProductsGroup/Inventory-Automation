@@ -66,7 +66,7 @@ def run_sps_inventory_update() -> None:
 
             # ── Navigate directly to Transactions list ─────────────────────────
             # Skip the dashboard tile entirely — go straight to the transactions URL.
-            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="networkidle")
+            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="domcontentloaded")
             _save_screenshot(page, "transactions_tab")
 
             # ── Click Create New (opens the new document dialog) ──────────────

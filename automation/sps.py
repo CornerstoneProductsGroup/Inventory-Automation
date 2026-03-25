@@ -62,15 +62,12 @@ def run_sps_inventory_update() -> None:
 
         try:
             # ── Login ──────────────────────────────────────────────────────────
-            page.goto(settings.sps_url, wait_until="domcontentloaded")
+            page.goto(settings.sps_url, wait_until="networkidle")
             _perform_sps_login(page, settings.sps_username, settings.sps_password, settings.timeout_ms)
-            page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(5000)
+            page.wait_for_load_state("networkidle")
             _save_screenshot(page, "after_login")
 
             # ── Click Fulfillment tile ─────────────────────────────────────────────
-            # The tile is an <a> or clickable parent wrapping the cube svg img.
-            # Try direct page first, then fall back to searching inside iframes.
             fulfillment_selectors = [
                 "a:has(img[src*='cube'])",
                 "a:has(img.sps-tile--image)",
@@ -92,7 +89,6 @@ def run_sps_inventory_update() -> None:
                     continue
 
             if not clicked:
-                # Portal may render inside an iframe — search all frames
                 for frame in page.frames:
                     if clicked:
                         break
@@ -108,79 +104,78 @@ def run_sps_inventory_update() -> None:
 
             if not clicked:
                 raise RuntimeError("Could not find Fulfillment tile. Check screenshots for current page state.")
-            page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(5000)
+            page.wait_for_load_state("networkidle")
             _save_screenshot(page, "fulfillment_selected")
 
-            # ── Navigate directly to Transactions list ────────────────────────────
-            # The tab lives inside an iframe so direct navigation is more reliable.
-            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="domcontentloaded")
-            page.wait_for_timeout(3000)
+            # ── Navigate directly to Transactions list ─────────────────────────
+            page.goto("https://commerce.spscommerce.com/fulfillment/transactions/list/", wait_until="networkidle")
             _save_screenshot(page, "transactions_tab")
 
             # ── Click Create New (opens the new document dialog) ──────────────
             f = _get_frame(page, "button.sps-button__clickable-element", settings.timeout_ms)
             f.locator("button.sps-button__clickable-element", has_text="Create New").first.click()
-            page.wait_for_timeout(2000)
-            _save_screenshot(page, "create_new_dialog")
 
             # ── Open Partner dropdown and select Tractor Supply Dropship ───────
             f = _get_frame(page, "[data-testid='createNewDocPartnerSelector-value']", settings.timeout_ms)
             f.locator("[data-testid='createNewDocPartnerSelector-value']").click()
-            page.wait_for_timeout(1000)
-            f.locator("span", has_text="Tractor Supply Dropship").first.click()
-            page.wait_for_timeout(1000)
+            option = f.locator("span", has_text="Tractor Supply Dropship").first
+            option.wait_for(state="visible", timeout=settings.timeout_ms)
+            option.click()
             _save_screenshot(page, "partner_selected")
 
             # ── Check "I don't have a source document" ─────────────────────────
             f = _get_frame(page, "label.sps-checkable__label", settings.timeout_ms)
-            f.locator("label.sps-checkable__label", has_text="I don't have a source document.").first.click()
-            page.wait_for_timeout(1000)
+            checkbox = f.locator("label.sps-checkable__label", has_text="I don't have a source document.").first
+            checkbox.wait_for(state="visible", timeout=settings.timeout_ms)
+            checkbox.click()
             _save_screenshot(page, "no_source_doc_checked")
 
             # ── Open template dropdown and select Inventory Main ───────────────
             f = _get_frame(page, "[data-testid='createNewDocTemplateSelector-value']", settings.timeout_ms)
             f.locator("[data-testid='createNewDocTemplateSelector-value']").click()
-            page.wait_for_timeout(1000)
-            f.locator("span", has_text="Inventory Main").first.click()
-            page.wait_for_timeout(1000)
+            template = f.locator("span", has_text="Inventory Main").first
+            template.wait_for(state="visible", timeout=settings.timeout_ms)
+            template.click()
             _save_screenshot(page, "template_selected")
 
             # ── Click Create New in the modal ──────────────────────────────────
             f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Create New']", settings.timeout_ms)
             f.locator("button[data-testid='modalOkBtn'][title='Create New']").click()
-            page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(3000)
+            page.wait_for_load_state("networkidle")
             _save_screenshot(page, "form_loaded")
 
-            # ── Expand SHORT section (optional — skipped if not present) ────────
+            # ── Expand SHORT section (optional — skipped if already expanded) ──
             try:
                 f = _get_frame(page, "button[data-testid='dataEntryCard__expanding']", 5000)
-                f.locator("button[data-testid='dataEntryCard__expanding']").first.click()
-                page.wait_for_timeout(1500)
+                btn = f.locator("button[data-testid='dataEntryCard__expanding']").first
+                btn.wait_for(state="visible", timeout=5000)
+                btn.click()
                 _save_screenshot(page, "short_expanded")
             except Exception:
-                pass  # Section may already be expanded or not present
+                pass
 
             # ── Set Report Date to today ───────────────────────────────────────
             f = _get_frame(page, "input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']", settings.timeout_ms)
             date_field = f.locator("input[data-testid='inventoryAdvice.header.reportDate2-input_date_input']")
+            date_field.wait_for(state="visible", timeout=settings.timeout_ms)
             date_field.triple_click()
             date_field.fill(today)
             f.locator("body").press("Tab")
-            page.wait_for_timeout(500)
             _save_screenshot(page, "date_set")
 
             # ── Click Send button ──────────────────────────────────────────────
             f = _get_frame(page, "button[data-testid='dataEntry_document-actions-send']", settings.timeout_ms)
-            f.locator("button[data-testid='dataEntry_document-actions-send']").click()
-            page.wait_for_timeout(2000)
+            send_btn = f.locator("button[data-testid='dataEntry_document-actions-send']")
+            send_btn.wait_for(state="visible", timeout=settings.timeout_ms)
+            send_btn.click()
             _save_screenshot(page, "send_clicked")
 
             # ── Click Continue on confirmation dialog ──────────────────────────
             f = _get_frame(page, "button[data-testid='modalOkBtn'][title='Continue']", settings.timeout_ms)
-            f.locator("button[data-testid='modalOkBtn'][title='Continue']").click()
-            page.wait_for_load_state("domcontentloaded")
+            continue_btn = f.locator("button[data-testid='modalOkBtn'][title='Continue']")
+            continue_btn.wait_for(state="visible", timeout=settings.timeout_ms)
+            continue_btn.click()
+            page.wait_for_load_state("networkidle")
             _save_screenshot(page, "submitted")
 
             print(f"SPS Commerce (Tractor Supply) inventory update submitted successfully for {today}.")

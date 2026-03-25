@@ -44,7 +44,7 @@ def run_sps_inventory_update() -> None:
             # ── Login ──────────────────────────────────────────────────────────
             page.goto(settings.sps_url, wait_until="domcontentloaded")
             _perform_sps_login(page, settings.sps_username, settings.sps_password, settings.timeout_ms)
-            page.wait_for_load_state("networkidle")
+            page.wait_for_load_state("domcontentloaded")
             page.wait_for_timeout(10000)
             _save_screenshot(page, "after_login")
 

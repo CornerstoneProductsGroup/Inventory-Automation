@@ -37,6 +37,65 @@ def _click_first_available_profile(page, timeout_ms: int) -> None:
             continue
 
 
+def _perform_login(page, username: str, password: str, timeout_ms: int) -> None:
+    # CommerceHub can present either a two-step identifier/password flow or legacy single-page login.
+    if "account.commercehub.com/u/login/identifier" in page.url:
+        page.locator("input[name='username']").fill(username)
+        page.locator("button._button-login-id").click()
+        page.locator("input[name='password']").wait_for(state="visible", timeout=timeout_ms)
+        page.locator("input[name='password']").fill(password)
+        page.locator("button._button-login-password").click()
+        page.wait_for_load_state("domcontentloaded")
+        return
+
+    username_selectors = ["#j_username", "input[name='j_username']", "#username", "input[type='email']"]
+    password_selectors = ["#j_password", "input[name='j_password']", "#password", "input[type='password']"]
+
+    username_filled = False
+    for selector in username_selectors:
+        locator = page.locator(selector).first
+        if locator.count() > 0:
+            locator.fill(username)
+            username_filled = True
+            break
+
+    password_filled = False
+    for selector in password_selectors:
+        locator = page.locator(selector).first
+        if locator.count() > 0:
+            locator.fill(password)
+            password_filled = True
+            break
+
+    if not username_filled or not password_filled:
+        raise RuntimeError("Could not find login fields on Rithum page.")
+
+    submit_candidates = [
+        "#loginButton",
+        "input[type='submit'][name='submit']",
+        "input[type='submit'][value*='Log In']",
+        "input[type='submit'][value*='Login']",
+        "button[type='submit']",
+        "button:has-text('Log In')",
+        "button:has-text('Login')",
+        "button:has-text('Continue')",
+        "input[type='submit']",
+    ]
+
+    submitted = False
+    for selector in submit_candidates:
+        locator = page.locator(selector).first
+        if locator.count() > 0:
+            locator.click()
+            submitted = True
+            break
+
+    if not submitted:
+        page.keyboard.press("Enter")
+
+    page.wait_for_load_state("domcontentloaded")
+
+
 def run_rithum_inventory_update() -> None:
     settings = load_settings()
 
@@ -48,54 +107,14 @@ def run_rithum_inventory_update() -> None:
 
         try:
             page.goto(settings.rithum_url, wait_until="domcontentloaded")
-
-            # Login fields vary across account setups; try common selectors.
-            username_selectors = ["#j_username", "input[name='j_username']", "#username", "input[type='email']"]
-            password_selectors = ["#j_password", "input[name='j_password']", "#password", "input[type='password']"]
-
-            username_filled = False
-            for selector in username_selectors:
-                locator = page.locator(selector).first
-                if locator.count() > 0:
-                    locator.fill(settings.rithum_username)
-                    username_filled = True
-                    break
-
-            password_filled = False
-            for selector in password_selectors:
-                locator = page.locator(selector).first
-                if locator.count() > 0:
-                    locator.fill(settings.rithum_password)
-                    password_filled = True
-                    break
-
-            if not username_filled or not password_filled:
-                raise RuntimeError("Could not find login fields on Rithum page.")
-
-            submit_candidates = [
-                "input[type='submit']",
-                "button[type='submit']",
-                "button:has-text('Log In')",
-                "button:has-text('Login')",
-                "input[value*='Log In']",
-                "input[value*='Login']",
-            ]
-
-            submitted = False
-            for selector in submit_candidates:
-                locator = page.locator(selector).first
-                if locator.count() > 0:
-                    locator.click()
-                    submitted = True
-                    break
-
-            if not submitted:
-                raise RuntimeError("Could not find login submit button.")
-
-            page.wait_for_load_state("domcontentloaded")
+            _perform_login(page, settings.rithum_username, settings.rithum_password, settings.timeout_ms)
             _save_screenshot(page, "after_login")
 
-            _click_first_available_profile(page, settings.timeout_ms)
+            profile_link = page.locator("a.application-identity-item").filter(has_text="Cornerstone Products Group").first
+            if profile_link.count() > 0 and profile_link.is_visible(timeout=2500):
+                profile_link.click(timeout=settings.timeout_ms)
+            else:
+                _click_first_available_profile(page, settings.timeout_ms)
             page.wait_for_load_state("domcontentloaded")
 
             page.goto("https://dsm.commercehub.com/dsm/gotoUpdateInventory.do", wait_until="domcontentloaded")

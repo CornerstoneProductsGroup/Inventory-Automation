@@ -72,8 +72,24 @@ def run_sps_inventory_update() -> None:
             _save_screenshot(page, "transactions_tab")
 
             # ── Click Create New (opens the new document dialog) ──────────────
-            f = _get_frame(page, "button.sps-button__clickable-element", settings.timeout_ms)
-            f.locator("button.sps-button__clickable-element", has_text="Create New").first.click()
+            create_new_selectors = [
+                "button[data-testid='createNewBtn']",
+                "button[title='Create New']",
+                "button.sps-button__clickable-element:has-text('Create New')",
+            ]
+            clicked = False
+            for sel in create_new_selectors:
+                try:
+                    f = _get_frame(page, sel, settings.timeout_ms)
+                    btn = f.locator(sel).first
+                    btn.wait_for(state="visible", timeout=settings.timeout_ms)
+                    btn.click()
+                    clicked = True
+                    break
+                except Exception:
+                    continue
+            if not clicked:
+                raise RuntimeError("Could not find Create New button on transactions page.")
 
             # ── Open Partner dropdown and select Tractor Supply Dropship ───────
             f = _get_frame(page, "[data-testid='createNewDocPartnerSelector-value']", settings.timeout_ms)

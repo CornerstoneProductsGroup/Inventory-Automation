@@ -1,6 +1,6 @@
 # Inventory-Automation
 
-Automates the daily Rithum inventory submission flow using Playwright.
+Automates the daily Rithum and SPS inventory submission flows using Playwright.
 
 ## What This Automates
 
@@ -48,7 +48,19 @@ TIMEOUT_MS=30000
 ## Run
 
 ```bash
+python run_all.py
+```
+
+Run only Rithum:
+
+```bash
 python run_rithum.py
+```
+
+Run only SPS:
+
+```bash
+python run_sps.py
 ```
 
 Screenshots are saved under `screenshots/`.
@@ -58,8 +70,18 @@ Screenshots are saved under `screenshots/`.
 Run daily at 7:00 AM:
 
 ```bash
-0 7 * * * cd /workspaces/Inventory-Automation && . .venv/bin/activate && python run_rithum.py >> cron.log 2>&1
+0 7 * * * /workspaces/Inventory-Automation/run_daily.sh >> /workspaces/Inventory-Automation/cron.log 2>&1
 ```
+
+Install the cron job:
+
+```bash
+crontab -e
+```
+
+Then paste the line above and save.
+
+The scheduled job runs both automations by calling `run_all.py` through the project virtual environment.
 
 ## Security Notes
 

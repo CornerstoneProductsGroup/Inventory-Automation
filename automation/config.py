@@ -31,7 +31,8 @@ def load_settings() -> Settings:
     sps_url = os.getenv("SPS_URL", "https://commerce.spscommerce.com")
     sps_username = os.getenv("SPS_USERNAME", "")
     sps_password = os.getenv("SPS_PASSWORD", "")
-    headless = _to_bool(os.getenv("HEADLESS", "true"), default=True)
+    # Default visible browser for desktop runs; set HEADLESS=true for servers/CI.
+    headless = _to_bool(os.getenv("HEADLESS", "false"), default=False)
     timeout_ms = int(os.getenv("TIMEOUT_MS", "30000"))
 
     if not rithum_username:

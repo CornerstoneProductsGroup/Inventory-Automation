@@ -213,9 +213,15 @@ def _process_depot_tracking_page(page: Page, tracking_dict: dict) -> bool:
 
     print("Depot tracking: submitting batch...")
     try:
-        page.locator("#confirmbtn").click()
-        page.wait_for_load_state("domcontentloaded")
-        page.wait_for_load_state("networkidle", timeout=_SHIP_LIST_TIMEOUT_MS)
+        # Rithum often keeps long-polling / background requests alive; waiting for
+        # "navigation" after click can hit Playwright's default timeout even when
+        # the submit actually succeeded. Do not auto-wait for navigation on click.
+        page.locator("#confirmbtn").click(no_wait_after=True, timeout=120000)
+        try:
+            page.wait_for_load_state("domcontentloaded", timeout=120000)
+        except Exception:
+            pass
+        page.wait_for_timeout(2000 if _chain_fast() else 3500)
         return True
     except Exception as exc:
         print(f"Depot tracking: submit failed: {exc}")
@@ -309,8 +315,12 @@ def _process_depot_invoice_page(page: Page) -> bool:
         confirm = invoice_frame.locator("#confirmbtn").first
         if confirm.count() == 0:
             confirm = page.locator("#confirmbtn").first
-        confirm.click()
-        page.wait_for_load_state("domcontentloaded")
+        confirm.click(no_wait_after=True, timeout=120000)
+        try:
+            page.wait_for_load_state("domcontentloaded", timeout=120000)
+        except Exception:
+            pass
+        page.wait_for_timeout(2000 if _chain_fast() else 3500)
         return True
     except Exception:
         print("Depot invoicing: submit not found.")

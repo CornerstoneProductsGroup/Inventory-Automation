@@ -41,7 +41,7 @@ cp .env.example .env
 RITHUM_URL=https://dsm.commercehub.com/dsm/gotoHome.do
 RITHUM_USERNAME=your-email@example.com
 RITHUM_PASSWORD=your-password
-HEADLESS=true
+HEADLESS=false
 TIMEOUT_MS=30000
 ```
 

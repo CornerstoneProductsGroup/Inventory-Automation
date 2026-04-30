@@ -6,6 +6,20 @@ from playwright.sync_api import sync_playwright
 
 from automation.config import load_settings
 
+# Same path as run_sps_tracking.py (reuse session after inventory).
+_SPS_PLAYWRIGHT_STORAGE = Path(__file__).resolve().parent.parent / "sps_playwright_storage.json"
+
+
+def _persist_sps_session(context, label: str = "") -> None:
+    """Write cookies/local storage so run_sps_tracking can reuse this login."""
+    try:
+        _SPS_PLAYWRIGHT_STORAGE.parent.mkdir(parents=True, exist_ok=True)
+        context.storage_state(path=str(_SPS_PLAYWRIGHT_STORAGE))
+        suffix = f" ({label})" if label else ""
+        print(f"Saved SPS browser session for tracking reuse{suffix}: {_SPS_PLAYWRIGHT_STORAGE}")
+    except OSError as exc:
+        print(f"Warning: could not save SPS storage state ({_SPS_PLAYWRIGHT_STORAGE}): {exc}")
+
 
 def _timestamp() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -88,6 +102,7 @@ def run_sps_inventory_update() -> None:
             page.goto(settings.sps_url, wait_until="load")
             _perform_sps_login(page, settings.sps_username, settings.sps_password, settings.timeout_ms)
             _save_screenshot(page, "after_login")
+            _persist_sps_session(context, label="after login")
 
             # ── Navigate directly to Transactions list ─────────────────────────
             # Skip the dashboard tile entirely — go straight to the transactions URL.
@@ -177,6 +192,7 @@ def run_sps_inventory_update() -> None:
             _save_screenshot(page, "submitted")
 
             print(f"SPS Commerce (Tractor Supply) inventory update submitted successfully for {today}.")
+            _persist_sps_session(context, label="after inventory submit")
         except PlaywrightTimeoutError as exc:
             _save_screenshot(page, "timeout_error")
             raise RuntimeError(f"SPS timed out during automation: {exc}") from exc

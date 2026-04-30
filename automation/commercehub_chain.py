@@ -2,7 +2,7 @@
 One Playwright browser session for CommerceHub (Rithum):
 
 1. Log in once (Lowe's config selectors / profile).
-2. Submit inventory update (Lowe's + Home Depot IBL).
+2. Submit inventory update (Lowe's + Home Depot IBL), unless --skip-inventory.
 3. Home Depot quickship tracking (UPS CSV).
 4. Home Depot quickinvoice.
 5. Lowe's workflows from config (ship to store, ship to customer, invoice).
@@ -45,7 +45,12 @@ def main() -> int:
         parser.add_argument(
             "--submit",
             action="store_true",
-            help="Submit forms in Lowe's / Depot steps (inventory always submits).",
+            help="Submit forms in Lowe's / Depot steps (Rithum inventory runs unless --skip-inventory).",
+        )
+        parser.add_argument(
+            "--skip-inventory",
+            action="store_true",
+            help="Skip Rithum inventory submission; still run Depot tracking/invoicing and Lowe's workflows.",
         )
         parser.add_argument(
             "--lowes-config",
@@ -76,8 +81,11 @@ def main() -> int:
             try:
                 automation.login(page)
 
-                print("\n=== Rithum inventory (Lowe's + Home Depot) ===")
-                run_rithum_inventory_on_authenticated_page(page, settings)
+                if args.skip_inventory:
+                    print("\n=== Rithum inventory skipped (--skip-inventory) ===")
+                else:
+                    print("\n=== Rithum inventory (Lowe's + Home Depot) ===")
+                    run_rithum_inventory_on_authenticated_page(page, settings)
 
                 print("\n=== Home Depot tracking ===")
                 run_depot_tracking_with_page(page)

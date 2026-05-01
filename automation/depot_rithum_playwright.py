@@ -136,10 +136,14 @@ def _process_depot_tracking_page(page: Page, tracking_dict: dict) -> bool:
         return False
 
     touched = False
+    matched_po_count = 0
     for i in range(n):
         po_elem = po_links.nth(i)
         try:
             po = po_elem.inner_text().strip().zfill(9)
+            if po not in tracking_dict:
+                continue
+            matched_po_count += 1
             href = po_elem.get_attribute("href") or ""
             if "Hub_PO=" not in href:
                 continue
@@ -152,19 +156,21 @@ def _process_depot_tracking_page(page: Page, tracking_dict: dict) -> bool:
             )
             count_qty = qty_inputs.count()
             if count_qty == 0:
-                skip_order = _filled_select(page, ship_sel)
+                qty_and_ship_done = _filled_select(page, ship_sel)
             else:
-                skip_order = True
+                qty_and_ship_done = True
                 for j in range(count_qty):
                     try:
                         if not (qty_inputs.nth(j).input_value() or "").strip():
-                            skip_order = False
+                            qty_and_ship_done = False
                             break
                     except Exception:
-                        skip_order = False
+                        qty_and_ship_done = False
                         break
-                skip_order = skip_order and _filled_select(page, ship_sel)
-            if skip_order:
+                qty_and_ship_done = qty_and_ship_done and _filled_select(page, ship_sel)
+            # Do not skip when CSV has tracking but the tracking field is still empty —
+            # CommerceHub can show qty + ship method already filled while tracking is blank.
+            if qty_and_ship_done and _filled_input(page, track_sel):
                 continue
 
             remaining = page.locator(
@@ -200,18 +206,21 @@ def _process_depot_tracking_page(page: Page, tracking_dict: dict) -> bool:
                     page.locator(ship_sel).fill("UPS Ground")
                 touched = True
 
-            if po in tracking_dict and not _filled_input(page, track_sel):
+            if not _filled_input(page, track_sel):
                 page.locator(track_sel).fill("")
                 page.locator(track_sel).fill(tracking_dict[po])
                 touched = True
         except Exception as exc:
             print(f"Depot tracking: error on PO row: {exc}")
 
-    if not touched:
-        print("Depot tracking: nothing to fill on this page; moving on.")
+    if matched_po_count == 0:
+        print("Depot tracking: loaded page has no PO matches in CSV; moving on to invoicing.")
         return False
 
-    print("Depot tracking: submitting batch...")
+    if not touched:
+        print("Depot tracking: matched PO(s) found, values already present; submitting batch...")
+    else:
+        print("Depot tracking: submitting batch...")
     try:
         # Rithum often keeps long-polling / background requests alive; waiting for
         # "navigation" after click can hit Playwright's default timeout even when
@@ -221,7 +230,15 @@ def _process_depot_tracking_page(page: Page, tracking_dict: dict) -> bool:
             page.wait_for_load_state("domcontentloaded", timeout=120000)
         except Exception:
             pass
-        page.wait_for_timeout(2000 if _chain_fast() else 3500)
+        # Explicitly wait until the quickship list is rendered again before
+        # returning to the caller; the caller then re-scans PO rows.
+        if not _wait_for_tracking_page_ready(page, _SHIP_LIST_TIMEOUT_MS):
+            print(
+                f"Depot tracking: submit returned but ship list not ready after "
+                f"{int(_SHIP_LIST_TIMEOUT_MS / 1000)}s."
+            )
+            return False
+        page.wait_for_timeout(500 if _chain_fast() else 900)
         return True
     except Exception as exc:
         print(f"Depot tracking: submit failed: {exc}")
